@@ -1,22 +1,18 @@
 const http = require("http");
-const mongoose = require("mongoose");
-const { Server } = require("socket.io");
+const dotenv = require("dotenv");
 const app = require("./app");
+const connectDB = require("./config/db");
+// const { setupSocket } = require('./sockets/socket');
 
-const PORT = process.env.PORT;
-const server = http.createServer(app);
+dotenv.config();
 
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"]
-  }
+const PORT = process.env.PORT || 5001;
+// const server = http.createServer(app);
+// setupSocket(server);
+
+connectDB().then(() => {
+  const PORT = process.env.PORT || 5001;
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
 });
-// require("./sockets/chatSocket")(io);
-
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("MongoDB connected");
-    server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  })
-  .catch((err) => console.error("MongoDB connection failed:", err));

@@ -19,16 +19,12 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
     },
     avatarUrl: String,
-    bio: String,
-    phone: String,
-    location: String,
     status: {
       type: String,
       enum: ["online", "offline"],
       default: "offline",
     },
     lastSeen: Date,
-    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
