@@ -65,7 +65,7 @@
                             "language": "json"
                         }
                     },
-                    "raw": "{\n  \"members\": [\n    \"{{user_id}}\",\n    \"{{user_id_2}}\",\n  ],\n  \"creatorId\": \"{{user_id}}\",\n  \"groupName\": \"Test Group\",\n  \"groupAvatar\": \"url.png\"\n}"
+                    "raw": "{\n  \"members\": [\n    \"{{user_id}}\",\n    \"{{user_id_2}}\"\n  ],\n  \"creatorId\": \"{{user_id}}\",\n  \"groupName\": \"Test Group\",\n  \"groupAvatar\": \"url.png\"\n}"
                 }
             }
         },
