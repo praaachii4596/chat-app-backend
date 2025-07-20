@@ -11,16 +11,19 @@ app.use(express.json());
 
 const authRoutes = require("./routes/authRoutes");
 const chatRoutes = require("./routes/chatRoutes");
-// const messageRoutes = require('./routes/messageRoutes');
+const messageRoutes = require("./routes/messageRoutes");
 
-// const { notFound, errorHandler } = require('./middleware/errorHandler');
+const { notFound, errorHandler } = require("./middleware/errorHandler");
+
+const path = require("path");
+app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/chats", chatRoutes);
-// app.use('/api/messages', messageRoutes);
+app.use("/api/messages", messageRoutes);
 
-// app.use(notFound);
-// app.use(errorHandler);
+app.use(notFound);
+app.use(errorHandler);
 
 app.get("/", (req, res) => {
   res.send("Chat App Backend Running");

@@ -1,15 +1,12 @@
 const mongoose = require("mongoose");
 const Chat = require("../models/Chat");
-const User = require("../models/User");
+const Message = require("../models/Message");
 
 // @desc    Create new group chat
 // @route   POST /api/chats/group
 const createGroupChat = async (req, res) => {
-  const { members, groupName, groupAvatar, creatorId } = req.body;
-
-  if (!creatorId || !mongoose.Types.ObjectId.isValid(creatorId)) {
-    return res.status(400).json({ message: "Invalid or missing creatorId" });
-  }
+  const { members, groupName, groupAvatar } = req.body;
+  const creatorId = req.user._id;
 
   if (!members || !Array.isArray(members) || members.length < 2) {
     return res.status(400).json({
@@ -22,11 +19,6 @@ const createGroupChat = async (req, res) => {
   }
 
   try {
-    const creator = await User.findById(creatorId);
-    if (!creator) {
-      return res.status(404).json({ message: "Creator not found" });
-    }
-
     const uniqueMembers = new Set([
       ...members.map((id) => id.toString()),
       creatorId.toString(),
@@ -52,10 +44,10 @@ const createGroupChat = async (req, res) => {
 };
 
 // @desc    Get all chats for a user
-// @route   GET /api/chats?userId=xxx
+// @route   GET /api/chats
 const getAllChats = async (req, res) => {
   try {
-    const { userId } = req.query;
+    const userId = req.user._id;
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res
@@ -73,8 +65,25 @@ const getAllChats = async (req, res) => {
           select: "name avatarUrl",
         },
       })
-      .sort({ updatedAt: -1 });
-    res.status(200).json(chats);
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    const chatsWithUnread = await Promise.all(
+      chats.map(async (chat) => {
+        const unreadCount = await Message.countDocuments({
+          chatId: chat._id,
+          senderId: { $ne: userId },
+          unreadBy: userId,
+        });
+
+        return {
+          ...chat,
+          unreadCount,
+        };
+      })
+    );
+
+    res.status(200).json(chatsWithUnread);
   } catch (error) {
     console.error("Error fetching chats:", error);
     res.status(500).json({ error: "Failed to get chats" });
@@ -119,13 +128,14 @@ const getChatById = async (req, res) => {
 const updateGroupChat = async (req, res) => {
   const userId = req.user._id;
   const { groupName, groupAvatar, members, admins } = req.body;
+  const chatId = req.params.id;
 
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+  if (!mongoose.Types.ObjectId.isValid(chatId)) {
     return res.status(400).json({ error: "Invalid chat ID" });
   }
 
   try {
-    const chat = await Chat.findById(req.params.id);
+    const chat = await Chat.findById(chatId);
     if (!chat || !chat.isGroup) {
       return res.status(404).json({ error: "Group chat not found" });
     }
@@ -149,7 +159,6 @@ const updateGroupChat = async (req, res) => {
       chat.members.push(...uniqueNewMembers);
     }
 
-    // Add only new admins
     if (Array.isArray(admins)) {
       const uniqueNewAdmins = admins.filter(
         (a) => !chat.admins.some((existing) => existing.toString() === a)
@@ -171,7 +180,7 @@ const updateGroupChat = async (req, res) => {
 };
 
 // @desc    Archive or unarchive a chat for a user
-// @route   PUT /api/chats/archive/:id
+// @route   PUT /api/chats/:id/archive
 const toggleArchive = async (req, res) => {
   const chatId = req.params.id;
   const userId = req.user._id;
@@ -212,7 +221,7 @@ const toggleArchive = async (req, res) => {
 };
 
 // @desc    Mute or unmute a chat for a user
-// @route   PUT /api/chats/mute/:id
+// @route   PUT /api/chats/:id/mute
 const toggleMute = async (req, res) => {
   const chatId = req.params.id;
   const userId = req.user._id;
@@ -286,6 +295,31 @@ const deleteGroup = async (req, res) => {
   }
 };
 
+// @desc    Leave a group chat
+// @route   PUT /api/chats/group/:id/leave
+const leaveGroup = async (req, res) => {
+  const chatId = req.params.id;
+  const userId = req.user._id;
+
+  try {
+    const chat = await Chat.findById(chatId);
+    if (!chat || !chat.isGroup)
+      return res.status(404).json({ error: "Group not found" });
+
+    chat.members = chat.members.filter(
+      (m) => m.toString() !== userId.toString()
+    );
+    chat.admins = chat.admins.filter((a) => a.toString() !== userId.toString());
+
+    await chat.save();
+
+    res.status(200).json({ message: "Left group successfully" });
+  } catch (error) {
+    console.error("Leave group error:", error);
+    res.status(500).json({ error: "Failed to leave group" });
+  }
+};
+
 module.exports = {
   createGroupChat,
   getAllChats,
@@ -294,4 +328,5 @@ module.exports = {
   toggleArchive,
   toggleMute,
   deleteGroup,
+  leaveGroup,
 };

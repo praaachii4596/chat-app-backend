@@ -12,13 +12,24 @@ const messageSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    content: String,
+    content: {
+      type: String,
+      trim: true,
+    },
     type: {
       type: String,
       enum: ["text", "image", "file", "audio", "reaction", "video"],
       default: "text",
     },
-    fileUrl: String,
+    fileUrl: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    reaction: {
+      type: String,
+      default: null,
+    },
     status: {
       type: Map,
       of: {
@@ -43,6 +54,7 @@ const messageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    unreadBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
